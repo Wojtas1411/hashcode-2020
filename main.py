@@ -1,14 +1,6 @@
 from multiprocessing import Pool
 from typing import List, Tuple
-from common import Library, Instance, save_result, transform_result, score
-
-
-def get_scanable_books(library: Library, total_days: int, start: int, books_scanned: set) -> list:
-    days = total_days - start - library.signup
-    scanable = days*library.perday
-    books_to_scan = list(set(library.books).difference(books_scanned))
-    books_to_scan.sort(key=lambda x: x[1], reverse=True)
-    return books_to_scan[:scanable]
+from common import Library, Instance, save_result, transform_result, score, get_scanable_books
 
 
 def basic(instance: Instance) -> List[Tuple[int, Library]]:
@@ -25,17 +17,17 @@ def basic(instance: Instance) -> List[Tuple[int, Library]]:
     while start < instance.days:
         lib_rank = []
         did_change = False
-        for i, library in instance.libraries:
-            if i in libraries_signed:
+        for it, library in instance.libraries:
+            if it in libraries_signed:
                 continue
             if start + library.signup >= instance.days:
                 continue
             did_change = True
 
-            scanable_books = get_scanable_books(library, instance.days, start, books_scanned)
-            score = sum(list(map(lambda x: x[1], scanable_books)))
+            books = get_scanable_books(library, instance.days, start, books_scanned)
+            sc = sum(list(map(lambda x: x[1], books)))
 
-            lib_rank.append((i, score))
+            lib_rank.append((it, sc))
 
         if not did_change:
             print('No change done')

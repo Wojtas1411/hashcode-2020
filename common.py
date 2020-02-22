@@ -13,7 +13,7 @@ class Instance:
     def __init__(self, filename: str):
         with open(filename, 'r') as f:
             lines = list(map(lambda x: x.strip().split(' '), f.readlines()))
-        self.books = int(lines[0][0])
+        self.num_books = int(lines[0][0])
         self.num_libraries = int(lines[0][1])
         self.days = int(lines[0][2])
         self.scoring = dict(get_enumerated_tuple_list(list(map(int, lines[1]))))
@@ -26,7 +26,7 @@ class Instance:
         self.libraries = get_enumerated_tuple_list(self.libraries)
 
     def print(self):
-        print(self.books, self.num_libraries, self.days)
+        print(self.num_books, self.num_libraries, self.days)
         print(len(self.libraries))
 
 
@@ -37,12 +37,12 @@ class Library:
     def __init__(self, n: int, s: int, p: int, b: List[Tuple[int, int]]):
         self.number_of_books = n
         self.signup = s
-        self.perday = p
+        self.per_day = p
         self.books = b
         self.books.sort(key=lambda x: x[1], reverse=True)
 
     def print(self):
-        print('N: ', self.number_of_books, '\tS: ', self.signup, '\tP: ', self.perday)
+        print('N: ', self.number_of_books, '\tS: ', self.signup, '\tP: ', self.per_day)
         print(self.books)
 
 
@@ -52,18 +52,13 @@ def transform_result(result: List[Tuple[int, Library]], total_days: int) -> List
     """
     res = []
     start = 0
-    books_scaned = set()
+    books_scanned = set()
     for i, library in result:
-        days_val = total_days - start - library.signup
-        if days_val <= 0:
-            break
-        scanable = days_val * library.perday
-        books = list(set(library.books).difference(books_scaned))
+        books = get_scanable_books(library, total_days, start, books_scanned)
         if not books:
             continue
-        books.sort(key=lambda x: x[1], reverse=True)
         res.append((i, list(map(lambda x: x[0], books))))
-        books_scaned = books_scaned.union(set(books[:scanable]))
+        books_scanned = books_scanned.union(set(books))
 
     return res
 
@@ -78,24 +73,23 @@ def save_result(result: List[Tuple[int, List[int]]], filename: str):
 
 def score(libraries: List[Tuple[int, Library]], total_days: int) -> int:
     start = 0
-    score = 0
-    books_scaned = set()
-    for id, library in libraries:
-        days_val = total_days - start - library.signup
-        if days_val <= 0:
-            break
-        scanable = days_val * library.perday
-        # TODO obejść jakoś kasowanie zbędnych i ponowne sortowanie
-        # teoretycznie można sprawdzać czy dany element istnieje w zbiorze i kasować
-        # pytanie co zajmuje więcej czasu
-        books = list(set(library.books).difference(books_scaned))
+    sc = 0
+    books_scanned = set()
+    for i, library in libraries:
+        books = get_scanable_books(library, total_days, start, books_scanned)
         if not books:
             continue
-        books.sort(key=lambda x: x[1], reverse=True)
 
-        score += sum(list(map(lambda x: x[1], books[:scanable])))
-        books_scaned = books_scaned.union(set(books[:scanable]))
-        library.books_chosen_num = len(books[:scanable])
+        sc += sum(list(map(lambda x: x[1], books)))
+        books_scanned = books_scanned.union(set(books))
+        library.books_chosen_num = len(books)
         start += library.signup
-        # print(scanable, library.books_choosen_num, score, len(books_scaned))
-    return score
+    return sc
+
+
+def get_scanable_books(library: Library, total_days: int, start: int, books_scanned: set) -> list:
+    days = max(0, total_days - start - library.signup)
+    able_to_be_scanned = days*library.per_day
+    books_to_scan = list(set(library.books).difference(books_scanned))
+    books_to_scan.sort(key=lambda x: x[1], reverse=True)
+    return books_to_scan[:able_to_be_scanned]

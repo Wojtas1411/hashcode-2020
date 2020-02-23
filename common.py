@@ -32,14 +32,13 @@ class Instance:
 
 class Library:
 
-    books_chosen_num = 0
-
     def __init__(self, n: int, s: int, p: int, b: List[Tuple[int, int]]):
         self.number_of_books = n
         self.signup = s
         self.per_day = p
         self.books = b
         self.books.sort(key=lambda x: x[1], reverse=True)
+        self.books_chosen_num = 0
 
     def print(self):
         print('N: ', self.number_of_books, '\tS: ', self.signup, '\tP: ', self.per_day)

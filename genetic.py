@@ -5,6 +5,7 @@ from multiprocessing import Pool
 from common import transform_result, save_result, Instance, Library, score, get_scanable_books
 import itertools
 from time import time
+import argparse
 
 
 class Chromosome:
@@ -127,7 +128,7 @@ def mutate(c: Chromosome) -> Chromosome:
     return c
 
 
-def genetic(instance: Instance, size=64, iterations=10**4, k=4) -> List[Tuple[int, Library]]:
+def genetic(instance: Instance, size=64, iterations=10, k=4) -> List[Tuple[int, Library]]:
     """
     genetic algorithm version 1
     :param instance: instance object
@@ -158,20 +159,36 @@ def genetic(instance: Instance, size=64, iterations=10**4, k=4) -> List[Tuple[in
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description="Genetic algorithm to solve problem from round 1 of Google Hashcode 2020 competition")
+    parser.add_argument('instance', type=str, choices=['a', 'b', 'c', 'd', 'e', 'f'], 
+        help='Select instance to compute')
+    parser.add_argument('-s', '--size', type=int, default=32, metavar='s', 
+        help='Population size')
+    parser.add_argument('-i', '--iterations', type=int, default=20, metavar='i', 
+        help='Number of iterations')
+    parser.add_argument('-k', '--tournament-size', type=int, default=4, metavar='k',
+        help='Size of tournament')
+    parser.add_argument('-m', '--mutations-count', type=int,  default=5, metavar='m',
+        help='Number of attempts to mutate single element in the population in each iteration')
+    args = parser.parse_args()
+
+    index = ord(args.instance) - ord('a')
+
     files = ['a_example.txt',
              'b_read_on.txt',
              'c_incunabula.txt',
              'd_tough_choices.txt',
              'e_so_many_books.txt',
              'f_libraries_of_the_world.txt']
-    file = files[1]
+    file = files[index]
+    print(file)
 
     i = Instance('input/' + file)
     print(i.num_books)
     print(score(i.libraries, i.days))
     print('--------')
 
-    r = genetic(i, size=64, iterations=10, k=4)
+    r = genetic(i, size=args.size, iterations=args.iterations, k=args.tournament_size)
 
     print('--------')
     save_result(transform_result(r, i.days), 'output/' + file[0] + '_genetic.out')

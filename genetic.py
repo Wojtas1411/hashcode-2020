@@ -122,8 +122,9 @@ def flatten(pre_population: List[Tuple[Chromosome, Chromosome]]) -> List[Chromos
 
 
 def mutate(c: Chromosome) -> Chromosome:
-    c.mutate()
-    c.calculate_split_and_score()
+    for _ in range(5):
+        c.mutate()
+        c.calculate_split_and_score()
     return c
 
 
@@ -139,6 +140,7 @@ def genetic(instance: Instance, size=64, iterations=10**4, k=4) -> List[Tuple[in
     p = Pool()
     population = p.map(chromosome_factory, [instance for _ in range(size)])
     result = deepcopy(population[0])
+    print('Setup done')
     for iteration in range(iterations):
         start = time()
         pre = p.starmap(tournament_and_crossover, [(population, k) for _ in range(size//2)])
@@ -151,7 +153,7 @@ def genetic(instance: Instance, size=64, iterations=10**4, k=4) -> List[Tuple[in
                 cb = pop.score
             if pop.score > result.score:
                 result = deepcopy(pop)
-        print(iteration, result.score, cb, time() - start, sep='\t')
+        print(iteration, result.score, cb, len(set(map(lambda x: x.score, population))), time() - start, sep='\t')
 
     return result.libraries
     
@@ -164,14 +166,14 @@ if __name__ == '__main__':
              'd_tough_choices.txt',
              'e_so_many_books.txt',
              'f_libraries_of_the_world.txt']
-    file = files[1]
+    file = files[4]
 
     i = Instance('input/' + file)
     print(i.num_books)
     print(score(i.libraries, i.days))
     print('--------')
 
-    r = genetic(i, size=64, iterations=10, k=4)
+    r = genetic(i, size=24, iterations=100, k=4)
 
     print('--------')
     save_result(transform_result(r, i.days), 'output/' + file[0] + '_genetic.out')

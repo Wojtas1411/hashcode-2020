@@ -122,13 +122,14 @@ def flatten(pre_population: List[Tuple[Chromosome, Chromosome]]) -> List[Chromos
     return list(itertools.chain.from_iterable(pre_population))
 
 
-def mutate(c: Chromosome) -> Chromosome:
-    c.mutate()
-    c.calculate_split_and_score()
+def mutate(c: Chromosome, times: int = 1) -> Chromosome:
+    for _ in range(times):
+        c.mutate()
+        c.calculate_split_and_score()
     return c
 
 
-def genetic(instance: Instance, size=64, iterations=10, k=4) -> List[Tuple[int, Library]]:
+def genetic(instance: Instance, size=64, iterations=10, k=4, mutations=5) -> List[Tuple[int, Library]]:
     """
     genetic algorithm version 1
     :param instance: instance object
@@ -140,11 +141,12 @@ def genetic(instance: Instance, size=64, iterations=10, k=4) -> List[Tuple[int, 
     p = Pool()
     population = p.map(chromosome_factory, [instance for _ in range(size)])
     result = deepcopy(population[0])
+    print('Setup done')
     for iteration in range(iterations):
         start = time()
         pre = p.starmap(tournament_and_crossover, [(population, k) for _ in range(size//2)])
         population = flatten(pre)
-        population = p.map(mutate, population)
+        population = p.starmap(mutate, [(pop, mutations) for pop in population])
         # print(max(list(map(lambda x: x.score, population))))
         cb = 0
         for pop in population:
@@ -152,7 +154,7 @@ def genetic(instance: Instance, size=64, iterations=10, k=4) -> List[Tuple[int, 
                 cb = pop.score
             if pop.score > result.score:
                 result = deepcopy(pop)
-        print(iteration, result.score, cb, time() - start, sep='\t')
+        print(iteration, result.score, cb, len(set(map(lambda x: x.score, population))), time() - start, sep='\t')
 
     return result.libraries
     
@@ -188,7 +190,7 @@ if __name__ == '__main__':
     print(score(i.libraries, i.days))
     print('--------')
 
-    r = genetic(i, size=args.size, iterations=args.iterations, k=args.tournament_size)
+    r = genetic(i, size=args.size, iterations=args.iterations, k=args.tournament_size, mutations=args.mutations_count)
 
     print('--------')
     save_result(transform_result(r, i.days), 'output/' + file[0] + '_genetic.out')

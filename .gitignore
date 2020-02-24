@@ -4,3 +4,4 @@
 *.out
 problem statement
 __pycache__
+*.zip

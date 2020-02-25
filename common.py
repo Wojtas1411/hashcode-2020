@@ -1,4 +1,5 @@
 from typing import List, Tuple, Any
+import signal
 
 
 def get_enumerated_tuple_list(lst: List[Any]) -> List[Tuple[int, Any]]:
@@ -92,3 +93,14 @@ def get_scanable_books(library: Library, total_days: int, start: int, books_scan
     books_to_scan = list(set(library.books).difference(books_scanned))
     books_to_scan.sort(key=lambda x: x[1], reverse=True)
     return books_to_scan[:able_to_be_scanned]
+
+
+class GracefulKiller:
+    kill_now = False
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+    def exit_gracefully(self,signum, frame):
+        print('Kill signal is bein handled, wait for iteration to finish')
+        self.kill_now = True

@@ -2,7 +2,7 @@ from typing import List, Tuple
 from random import shuffle, sample, randrange
 from copy import deepcopy
 from multiprocessing import Pool
-from common import transform_result, save_result, Instance, Library, score, get_scanable_books
+from common import transform_result, save_result, Instance, Library, score, get_scanable_books, GracefulKiller
 import itertools
 from time import time
 import argparse
@@ -81,8 +81,12 @@ def tournament(chromosomes: List[Chromosome], k=4) -> Chromosome:
 
 
 def crossover(a: Chromosome, b: Chromosome) -> Tuple[Chromosome, Chromosome]:
-    ap = deepcopy(a)
-    bp = deepcopy(b)
+    # ap = deepcopy(a)
+    # bp = deepcopy(b)
+    ap = a
+    ap.libraries = a.libraries.copy()
+    bp = b
+    bp.libraries = b.libraries.copy()
     ap.reorder_libraries()
     bp.reorder_libraries()
     # choose split point
@@ -138,6 +142,7 @@ def genetic(instance: Instance, size=64, iterations=10, k=4, mutations=5) -> Lis
     :param k: tournament size
     :return:
     """
+    monitor = GracefulKiller()
     p = Pool()
     population = p.map(chromosome_factory, [instance for _ in range(size)])
     result = deepcopy(population[0])
@@ -155,6 +160,9 @@ def genetic(instance: Instance, size=64, iterations=10, k=4, mutations=5) -> Lis
             if pop.score > result.score:
                 result = deepcopy(pop)
         print(iteration, result.score, cb, len(set(map(lambda x: x.score, population))), time() - start, sep='\t')
+
+        if monitor.kill_now:
+            break
 
     return result.libraries
     
@@ -194,3 +202,4 @@ if __name__ == '__main__':
 
     print('--------')
     save_result(transform_result(r, i.days), 'output/' + file[0] + '_genetic.out')
+    print('Result saved. Done.')

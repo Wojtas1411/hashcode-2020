@@ -60,6 +60,8 @@ def transform_result(result: List[Tuple[int, Library]], total_days: int) -> List
         res.append((i, list(map(lambda x: x[0], books))))
         books_scanned = books_scanned.union(set(books))
 
+        start += library.signup
+
     return res
 
 
@@ -107,7 +109,7 @@ def score(libraries: List[Tuple[int, Library]], total_days: int, num_books: int 
             print("Libraries used: \t", libs_used)
         print("Used:\t", all_slots - free_slots, "of", all_slots, "slots")
         print("Percent:\t", (all_slots - free_slots)/all_slots)
-        
+
     return sc
 
 

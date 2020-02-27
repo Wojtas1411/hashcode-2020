@@ -1,11 +1,12 @@
 from typing import List, Tuple
-from random import shuffle, sample, randrange
+from random import shuffle, sample, randrange, choice
 from copy import deepcopy
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from common import transform_result, save_result, Instance, Library, score, get_scanable_books, GracefulKiller
 import itertools
 from time import time
 import argparse
+from sortings import sort_by_num_books_desc, sort_by_setup_time_asc, sort_by_sum_book_scores_desc
 
 
 class Chromosome:
@@ -51,7 +52,7 @@ class Chromosome:
         a = randrange(0, self.split)
         b = randrange(self.split if self.split != len(self.libraries) else 0, len(self.libraries))
         libs[a], libs[b] = libs[b], libs[a]
-        sc = score(libs, self.days)
+        sc = score(libs, self.days, verbose=False)
         if sc > self.score:
             self.libraries = libs
 
@@ -71,6 +72,32 @@ class Chromosome:
             self.libraries.append(self.libraries.pop(j))
 
 
+class ChromosomeInitialized(Chromosome):
+
+    def __init__(self, instance: Instance):
+        self.days = instance.days
+        self.libraries = deepcopy(instance.libraries)
+        probs = []
+        methods = [
+            do_shuffle,
+            do_shuffle,
+            do_shuffle,
+            sort_by_setup_time_asc,
+            sort_by_num_books_desc,
+            sort_by_sum_book_scores_desc
+        ]
+        m = choice(methods)
+        self.libraries = m(self.libraries)
+        self.split = 0
+        self.score = 0
+        self.calculate_split_and_score()
+
+
+def do_shuffle(libraries: List[Tuple[int, Library]]) -> List[Tuple[int, Library]]:
+    shuffle(libraries)
+    return libraries
+
+
 def tournament(chromosomes: List[Chromosome], k=4) -> Chromosome:
     chosen = sample(chromosomes, k)
     m = (0, 0)
@@ -81,12 +108,12 @@ def tournament(chromosomes: List[Chromosome], k=4) -> Chromosome:
 
 
 def crossover(a: Chromosome, b: Chromosome) -> Tuple[Chromosome, Chromosome]:
-    # ap = deepcopy(a)
-    # bp = deepcopy(b)
-    ap = a
-    ap.libraries = a.libraries.copy()
-    bp = b
-    bp.libraries = b.libraries.copy()
+    ap = deepcopy(a)
+    bp = deepcopy(b)
+    # ap = a
+    # ap.libraries = a.libraries.copy()
+    # bp = b
+    # bp.libraries = b.libraries.copy()
     ap.reorder_libraries()
     bp.reorder_libraries()
     # choose split point
@@ -121,6 +148,9 @@ def tournament_and_crossover(chromosomes: List[Chromosome], k=4) -> Tuple[Chromo
 def chromosome_factory(instance: Instance) -> Chromosome:
     return Chromosome(instance)
 
+def chromosome_i_factory(instance: Instance) -> Chromosome:
+    return ChromosomeInitialized(instance)
+
 
 def flatten(pre_population: List[Tuple[Chromosome, Chromosome]]) -> List[Chromosome]:
     return list(itertools.chain.from_iterable(pre_population))
@@ -144,14 +174,22 @@ def genetic(instance: Instance, size=64, iterations=10, k=4, mutations=5) -> Lis
     """
     monitor = GracefulKiller()
     p = Pool()
-    population = p.map(chromosome_factory, [instance for _ in range(size)])
+    chunksize = min(1, size//(cpu_count() * 2))
+    population = p.map(chromosome_i_factory, [instance for _ in range(size)], chunksize=chunksize)
     result = deepcopy(population[0])
+    cb = 0
+    for pop in population:
+            if pop.score > cb:
+                cb = pop.score
+            if pop.score > result.score:
+                result = deepcopy(pop)
+
     print('Setup done')
     for iteration in range(iterations):
         start = time()
-        pre = p.starmap(tournament_and_crossover, [(population, k) for _ in range(size//2)])
+        pre = p.starmap(tournament_and_crossover, [(population, k) for _ in range(size//2)], chunksize=chunksize)
         population = flatten(pre)
-        population = p.starmap(mutate, [(pop, mutations) for pop in population])
+        population = p.starmap(mutate, [(pop, mutations) for pop in population], chunksize=chunksize)
         # print(max(list(map(lambda x: x.score, population))))
         cb = 0
         for pop in population:
@@ -195,11 +233,12 @@ if __name__ == '__main__':
 
     i = Instance('input/' + file)
     print(i.num_books)
-    print(score(i.libraries, i.days))
+    print(score(i.libraries, i.days, verbose=False))
     print('--------')
 
     r = genetic(i, size=args.size, iterations=args.iterations, k=args.tournament_size, mutations=args.mutations_count)
 
     print('--------')
+    print(score(r, i.days, verbose=False))
     save_result(transform_result(r, i.days), 'output/' + file[0] + '_genetic.out')
     print('Result saved. Done.')

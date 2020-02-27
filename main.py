@@ -1,6 +1,8 @@
 from multiprocessing import Pool
 from typing import List, Tuple
 from common import Library, Instance, save_result, transform_result, score, get_scanable_books
+import argparse
+from sortings import sort_by_num_books_desc, sort_by_sum_book_scores_desc, sort_by_setup_time_asc, sort_by_perday_desc
 
 
 def basic(instance: Instance) -> List[Tuple[int, Library]]:
@@ -47,13 +49,6 @@ def basic(instance: Instance) -> List[Tuple[int, Library]]:
     return ranking
 
 
-def sort_by_setup_time_desc(instance: Instance) -> List[Tuple[int, Library]]:
-    libraries = instance.libraries.copy()
-    libraries.sort(key=lambda x: x[1].signup)
-
-    return libraries
-
-
 def do_basic(filename: str):
     instance = Instance('input/' + filename)
     result = basic(instance)
@@ -65,19 +60,33 @@ if __name__ == '__main__':
     files = ['a_example.txt',
              'b_read_on.txt',
              'c_incunabula.txt',
-             # 'd_tough_choices.txt',
+             'd_tough_choices.txt',
              'e_so_many_books.txt',
              'f_libraries_of_the_world.txt']
+    
+    parser = argparse.ArgumentParser(description="Basic algorithm to solve problem from round 1 of Google Hashcode 2020 competition")
+    parser.add_argument('instance', type=str, choices=['a', 'b', 'c', 'd', 'e', 'f'], 
+        help='Select instance to compute')
+    args = parser.parse_args()
 
-    p = Pool()
-    p.map(do_basic, files)
-    print('done parallel')
+    index = ord(args.instance) - ord('a')
 
-    file_d = 'd_tough_choices.txt'
+    file = files[index]
 
-    i = Instance('input/' + file_d)
-    r = sort_by_setup_time_desc(i)
-    print('d', score(r, i.days))
-    t = transform_result(r, i.days)
-    save_result(t, 'output/d_result.out')
-    print('done d')
+    i = Instance('input/' + file)
+
+    r1 = sort_by_sum_book_scores_desc(i.libraries)
+    r2 = sort_by_num_books_desc(i.libraries)
+    r3 = sort_by_setup_time_asc(i.libraries)
+    r4 = sort_by_perday_desc(i.libraries)
+
+    print("Sum of books desc:\t", score(r1,i.days, i.num_books, i.num_libraries))
+    print("Number of books desc:\t", score(r2,i.days, i.num_books, i.num_libraries))
+    print("Setup time asc:\t", score(r3,i.days, i.num_books,i.num_libraries))
+    print("Perday desc:\t", score(r4, i.days, i.num_books, i.num_libraries))
+
+    # print(score(r, i.days, i.num_books, i.num_libraries))
+    
+    # t = transform_result(r, i.days)
+    # save_result(t, 'output/' + file[0] + '_basic.out')
+    print('Done')

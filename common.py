@@ -71,10 +71,13 @@ def save_result(result: List[Tuple[int, List[int]]], filename: str):
             f.write(" ".join(list(map(str, r[1]))) + '\n')
 
 
-def score(libraries: List[Tuple[int, Library]], total_days: int) -> int:
+def score(libraries: List[Tuple[int, Library]], total_days: int, num_books: int = -1, num_libraries: int = -1, verbose: bool = True) -> int:
     start = 0
     sc = 0
     books_scanned = set()
+    free_slots = 0
+    libs_used = 0
+    all_slots = 0
     for i, library in libraries:
         books = get_scanable_books(library, total_days, start, books_scanned)
         if not books:
@@ -82,8 +85,29 @@ def score(libraries: List[Tuple[int, Library]], total_days: int) -> int:
 
         sc += sum(list(map(lambda x: x[1], books)))
         books_scanned = books_scanned.union(set(books))
+
+        val = max(0, total_days - start - library.signup) * library.per_day
+        all_slots += val
+        free_slots += (val - len(books))
+
         library.books_chosen_num = len(books)
         start += library.signup
+        libs_used += 1
+    
+    if verbose:
+        if num_books > 0:
+            print("Used:\t", len(books_scanned), "of", num_books, "books")
+            print("Percent:\t", len(books_scanned)/num_books)
+        else:
+            print("Books used: \t", len(books_scanned))
+        if num_libraries > 0:
+            print("Used:\t", libs_used, "of", num_libraries, "libraries")
+            print("Percent:\t", libs_used/num_libraries)
+        else:
+            print("Libraries used: \t", libs_used)
+        print("Used:\t", all_slots - free_slots, "of", all_slots, "slots")
+        print("Percent:\t", (all_slots - free_slots)/all_slots)
+        
     return sc
 
 
